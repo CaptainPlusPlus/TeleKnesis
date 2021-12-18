@@ -14,7 +14,6 @@ import math
 import pandas as pd
 import numpy as np
 
-
 BOS_MARKER = "<s>"
 EOS_MARKER = "</s>"
 UNKNOWN = "<UNK>"
@@ -62,7 +61,6 @@ def get_unigram_counts(training_data):
 # column (with the special name UNKNOWN), all columns with count==1.
 # Return the vocabulary of the training data and a list of unknown words.
 def replace_oov(training_data):
-
     count_df = get_unigram_counts(training_data)
 
     # Words that appear only once are considered UNKNOWN
@@ -88,7 +86,6 @@ def replace_oov(training_data):
 # If a vocabulary is given, replace words that are not in the vocabulary with UNKNOWN.
 # If padding=True, insert BOS and EOS sentence markers.
 def get_bigram_counts(training_data, vocab=None, padding=True):
-
     # counts is a nested dict: {key=w_i, value = {key=w_j, value=count}}
     counts = {}
 
@@ -148,18 +145,19 @@ def build_model(bigram_counts, d=.75):
     #  ignored for add-1 smoothing.
     #  You do not need to build a dictionary for add-1 smoothing. The
     #  built-in dataframe operations are fast and efficient in this case.
-    #
-    # ToDo (Kneser-Ney):
-    #  Build the model using a nested dictionary (see get_bigram_counts for
-    #  an example of how to build a nested dictionary), then convert the
-    #  dictionary to a dataframe and return the dataframe.
-    #  It is necessary to use a dictionary because creating a dataframe and
-    #  updating/adding values in it is MUCH TOO SLOW.
-    #  Avoid making the same calculations over and over. Some values can be
-    #  reused (for example, continuation probabilities only need to be
-    #  calculated once).
 
-    return pd.DataFrame()
+    row_sums = bigram_counts.sum(axis=1).values
+    smooth_bigram_counts = bigram_counts.copy()
+    columns = list(smooth_bigram_counts)
+    for col in columns:
+        for row_idx, row in enumerate(smooth_bigram_counts.index):
+            smooth_bigram_counts.at[row, col] = \
+                laplace(smooth_bigram_counts.at[row, col], row_sums[row_idx],  len(columns))
+    return smooth_bigram_counts
+
+
+def laplace(bigram_count, count_given, vocab_size):
+    return (bigram_count + 1) / (count_given + vocab_size)
 
 
 # parse command-line arguments
@@ -176,7 +174,6 @@ def parse_args():
 #  not in this starter code. Please remove extra print statements that
 #  you may have added during development before submission.
 def main(args):
-
     # Read the training data
     train = read_and_preprocess_corpus(args.corpus_file)
 
