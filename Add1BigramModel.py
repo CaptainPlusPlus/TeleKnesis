@@ -25,7 +25,16 @@ UNKNOWN = "<UNK>"
 #  The returned sentence is a list of words ['<s>', 'w1', ..., 'wn', '</s>']
 #  Replace UNKNOWN with a randomly selected word from unknown_words.
 def generate_sentence(prob_df, unknown_words):
-    return []
+    words = [word for word in prob_df.columns]
+    weights = [prob_df.iloc[0][i] for i in prob_df.columns]
+    sentence = ['<s>']
+
+    columns = prob_df.columns
+    while 1:
+        print(sentence[-1], columns, prob_df.loc[sentence[-1]])
+        sentence += random.choices(prob_df.columns, prob_df.loc[sentence[-1]])
+        if sentence[-1] == '</s>': break
+    return sentence
 
 
 # ToDo:
@@ -152,7 +161,7 @@ def build_model(bigram_counts, d=.75):
     for col in columns:
         for row_idx, row in enumerate(smooth_bigram_counts.index):
             smooth_bigram_counts.at[row, col] = \
-                laplace(smooth_bigram_counts.at[row, col], row_sums[row_idx],  len(columns))
+                laplace(smooth_bigram_counts.at[row, col], row_sums[row_idx], len(columns))
     return smooth_bigram_counts
 
 
