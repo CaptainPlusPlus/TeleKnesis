@@ -26,10 +26,11 @@ class Test(TestCase):
 
     def test_get_build_model_sam_i_am_output(self):
         training_data = add1.read_and_preprocess_corpus("Data/sam_i_am.txt")
-        sentence = add1.generate_sentence(add1.build_model(add1.get_bigram_counts(training_data)), "cuck")
         sentences = []
-        for i in range(100): sentences += [add1.generate_sentence(add1.build_model(add1.get_bigram_counts(training_data)), "cuck")[-2]]
-        print(sentences.count('sam'))
+        super_model = add1.build_model(add1.get_bigram_counts(training_data))
+        for i in range(100): sentences += [add1.generate_sentence(super_model, "cuck")]
+        print(sentences)
+        # print(sentences.count('sam'))
         self.assertTrue(True)
 
     def test_get_build_model_50_output(self):

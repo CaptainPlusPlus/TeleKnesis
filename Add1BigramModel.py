@@ -26,7 +26,6 @@ UNKNOWN = "<UNK>"
 #  Replace UNKNOWN with a randomly selected word from unknown_words.
 def generate_sentence(prob_df, unknown_words):
     sentence = ['<s>']
-    print(prob_df.columns, prob_df.loc[sentence[-1]])
     while 1:
         sentence += random.choices(prob_df.columns, prob_df.loc[sentence[-1]])
         if sentence[-1] == '</s>': break
