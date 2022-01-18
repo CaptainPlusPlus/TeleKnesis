@@ -26,9 +26,14 @@ UNKNOWN = "<UNK>"
 #  Replace UNKNOWN with a randomly selected word from unknown_words.
 def generate_sentence(prob_df, unknown_words):
     sentence = ['<s>']
+
+    last_word = sentence[-1]
     while 1:
-        sentence += random.choices(prob_df.columns, prob_df.loc[sentence[-1]])
-        if sentence[-1] == '</s>': break
+        sentence += random.choices(prob_df.columns, prob_df.loc[last_word])
+        last_word = sentence[-1]
+
+        if last_word == '</s>': break
+        if last_word == "<UNK>": sentence[-1] = random.choice(unknown_words)
     return sentence
 
 
@@ -37,14 +42,6 @@ def generate_sentence(prob_df, unknown_words):
 #  where sent is a list of words [<s>, 'w1', ..., 'wn', </s>].
 def get_sent_logprob(log_df, sent):
     log_prob = 0
-
-    # ToDo ask if we should change unknown words in sent to <UNK>
-
-    for index, word in enumerate(sent[:]):
-        if word not in log_df.columns and word != "<s>":
-            sent[index] = "<UNK>"
-
-    # Sorry felix I tried to do it all in the same loop but i failed lol
 
     for index, word in enumerate(sent):
         if index+1 < len(sent):
