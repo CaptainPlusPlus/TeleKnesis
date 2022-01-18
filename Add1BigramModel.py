@@ -36,13 +36,28 @@ def generate_sentence(prob_df, unknown_words):
 #  Return the log probability of sent,
 #  where sent is a list of words [<s>, 'w1', ..., 'wn', </s>].
 def get_sent_logprob(log_df, sent):
-    return -np.inf
+    log_prob = 0
+
+    # ToDo ask if we should change unknown words in sent to <UNK>
+
+    for index, word in enumerate(sent[:]):
+        if word not in log_df.columns and word != "<s>":
+            sent[index] = "<UNK>"
+
+    # Sorry felix I tried to do it all in the same loop but i failed lol
+
+    for index, word in enumerate(sent):
+        if index+1 < len(sent):
+            log_prob += log_df.loc[word, sent[index+1]]
+
+    return log_prob
 
 
 # ToDo:
 #  Calculate the perplexity of the model with the given test sentences
 def get_perplexity(log_df, test_sentences):
-    return np.inf
+    pass
+
 
 
 # Return a DataFrame representing the unigram counts for the
@@ -185,6 +200,8 @@ def main(args):
     vocab, unknown_words = replace_oov(train)
 
     # ToDo: calculate and print the OOV rate of the training corpus
+    # ToDo: ask whether it is the OOV rate of the training or test corpus we have to calculate AND whether
+    #  it's the percentage of words over tokens or over word types
     oov_rate = 0
     print(f'OOV rate: {oov_rate}')
 
@@ -220,4 +237,4 @@ def main(args):
 
 
 if __name__ == '__main__':
-    main(parse_args())
+    pass
