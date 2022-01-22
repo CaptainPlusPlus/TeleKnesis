@@ -42,10 +42,7 @@ def generate_sentence(prob_df, unknown_words):
 #  where sent is a list of words [<s>, 'w1', ..., 'wn', </s>].
 def get_sent_logprob(log_df, sent):
     log_prob = 0
-
-    for index, word in enumerate(sent):
-        if index+1 < len(sent):
-            log_prob += log_df.loc[word, sent[index+1]]
+    for index in range(1, len(sent)): log_prob += log_df.loc[sent[index-1], sent[index]]
 
     return log_prob
 
@@ -53,7 +50,14 @@ def get_sent_logprob(log_df, sent):
 # ToDo:
 #  Calculate the perplexity of the model with the given test sentences
 def get_perplexity(log_df, test_sentences):
-    pass
+    # Extract log probabilities, Calculate Perplexity of all sentences appearing in concession
+    corpus_logprob = sum([get_sent_logprob(log_df, sent) for sent in test_sentences])
+
+    # Get number of words in corpues, counting EOS tokens, omitting BOS tokens
+    n_words = sum([len(sent) for sent in test_sentences]) - len(test_sentences)
+
+    # Assigning variables to perplexity formula
+    return math.pow(10, (-1 / n_words) * corpus_logprob)
 
 
 
@@ -196,12 +200,6 @@ def main(args):
     # Replace OOV words, and get the training vocab and unknown words
     vocab, unknown_words = replace_oov(train)
 
-    # ToDo: calculate and print the OOV rate of the training corpus
-    # ToDo: ask whether it is the OOV rate of the training or test corpus we have to calculate AND whether
-    #  it's the percentage of words over tokens or over word types
-    oov_rate = 0
-    print(f'OOV rate: {oov_rate}')
-
     # Get the bigram counts, using the fixed vocabulary
     bigram_counts = get_bigram_counts(train, vocab=vocab)
 
@@ -221,6 +219,18 @@ def main(args):
     # Read the test corpus, using the fixed vocabulary, and adding sentence markers
     test_sentences = read_and_preprocess_corpus(args.test_file, vocab=vocab, padding=True)
 
+    # ToDo: calculate and print the OOV rate of the test corpus
+    #  it's the percentage of words over tokens
+
+    n_words = 0
+    unks = 0
+
+    for sent in test_sentences:
+        n_words += len(sent)
+        unks += sent.count(UNKNOWN)
+    oov_rate = unks / n_words * 100
+    print(f'OOV rate: {oov_rate}')
+
     # Print the sentence probabilities for the first 5 test sentences
     for test_sent in test_sentences[:5]:
         # use log probabilities to get prob of a sentence
@@ -234,4 +244,4 @@ def main(args):
 
 
 if __name__ == '__main__':
-    pass
+    main(parse_args())
