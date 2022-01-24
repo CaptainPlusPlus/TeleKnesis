@@ -28,12 +28,13 @@ def generate_sentence(prob_df, unknown_words):
     sentence = ['<s>']
 
     last_word = sentence[-1]
-    while 1:
+    while len(sentence) <= 20:
         sentence += random.choices(prob_df.columns, prob_df.loc[last_word])
         last_word = sentence[-1]
 
         if last_word == '</s>': break
         if last_word == "<UNK>": sentence[-1] = random.choice(unknown_words)
+    if last_word != "</s>": sentence += ["</s>"]
     return sentence
 
 
@@ -42,7 +43,7 @@ def generate_sentence(prob_df, unknown_words):
 #  where sent is a list of words [<s>, 'w1', ..., 'wn', </s>].
 def get_sent_logprob(log_df, sent):
     log_prob = 0
-    for index in range(1, len(sent)): log_prob += log_df.loc[sent[index-1], sent[index]]
+    for index in range(1, len(sent)): log_prob += log_df.loc[sent[index - 1], sent[index]]
 
     return log_prob
 
@@ -58,7 +59,6 @@ def get_perplexity(log_df, test_sentences):
 
     # Assigning variables to perplexity formula
     return math.pow(10, (-1 / n_words) * corpus_logprob)
-
 
 
 # Return a DataFrame representing the unigram counts for the
@@ -226,10 +226,13 @@ def main(args):
     unks = 0
 
     for sent in test_sentences:
-        n_words += len(sent)
+        n_words += len(sent) - 2 # remove BOS and EOS
         unks += sent.count(UNKNOWN)
+
     oov_rate = unks / n_words * 100
-    print(f'OOV rate: {oov_rate}')
+    print(f'OOV rate test: {oov_rate}')
+
+
 
     # Print the sentence probabilities for the first 5 test sentences
     for test_sent in test_sentences[:5]:
