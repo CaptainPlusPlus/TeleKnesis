@@ -36,8 +36,8 @@ class Test(TestCase):
         self.assertTrue(1 == end_w2)
 
         # word types starting with word1
-        # TODO
-        # start_w1 = 0
-        # self.assertTrue(start_w1 == 3)
+        # print("row\n", sum(sam_bigram_counts.loc[["like"], :] != 0))
+        #self.assertTrue(start_w1 == 3)
+
 
         self.assertTrue(0.35 == kn.kneser_neys(0.75, bigram_count, count_w1, non_zeroes, end_w2, 3))
