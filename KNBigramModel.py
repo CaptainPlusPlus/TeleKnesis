@@ -153,9 +153,22 @@ def build_model(bigram_counts, d=.75):
     #  reused (for example, continuation probabilities only need to be
     #  calculated once).
 
-    return pd.DataFrame()
+    #print(bigram_counts.index)
 
-    print()
+    kn_dict = dict()
+
+    # wi is word1, wj is word2
+    for (w_i, w_j) in zip(bigram_counts.index, bigram_counts.columns):
+        kn_dict[w_i] = kn_dict.setdefault(w_i, {w_j: 0})
+        kn_dict[w_i][w_j] = kn_dict[w_i].setdefault(w_j, 0)
+
+    kn_df = pd.DataFrame(kn_dict)
+    kn_df.replace(np.nan, 0, inplace=True)
+
+    print(kn_df)
+
+
+
 
 
 # parse command-line arguments
