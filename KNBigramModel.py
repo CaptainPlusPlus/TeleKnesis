@@ -170,6 +170,13 @@ def build_model(bigram_counts, d=.75):
 
 
 
+def kneser_neys(d, bigram_count, w1_count, tot_bigr_types, wtypes_end_w2,  wtypes_start_w1):
+    lambda_w1 = (d * wtypes_start_w1) / w1_count
+
+    # TODO (us) create a dict. Calculate only if not in dict and add to dict
+    pcont_w2 = wtypes_end_w2 / tot_bigr_types
+
+    return max(bigram_count-d, 0) / w1_count + (lambda_w1 * pcont_w2)
 
 # parse command-line arguments
 def parse_args():
