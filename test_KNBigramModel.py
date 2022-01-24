@@ -19,19 +19,25 @@ class Test(TestCase):
 
         # bigram count
         bigram_count = sam_bigram_counts.loc["like", "sam"]
+        self.assertTrue(bigram_count == 2.0)
 
         # count w1:
         count_w1 = sam_bigram_counts.sum(axis=1)["like"]
+        self.assertTrue(count_w1 == 4.0)
 
         # number of non-zero bigram types
         non_zeroes = 0
         for column in sam_bigram_counts.columns:
             non_zeroes += sum(sam_bigram_counts[column] != 0)
+        self.assertTrue(non_zeroes == 15)
 
         # word types that end with word2
         end_w2 = sum(sam_bigram_counts["sam"] != 0)
+        self.assertTrue(1 == end_w2)
 
         # word types starting with word1
         # TODO
+        # start_w1 = 0
+        # self.assertTrue(start_w1 == 3)
 
         self.assertTrue(0.35 == kn.kneser_neys(0.75, bigram_count, count_w1, non_zeroes, end_w2, 3))
