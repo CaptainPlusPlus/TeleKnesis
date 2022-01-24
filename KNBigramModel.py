@@ -143,12 +143,6 @@ def read_and_preprocess_corpus(corpus_file, vocab=None, padding=False):
 #  Build the model using the given bigram counts dataframe,
 #  and using the smoothing method described in the project requirements.
 def build_model(bigram_counts, d=.75):
-    # ToDo (add-1):
-    #  The parameter d is only needed for Kneser-Ney smoothing, and can be
-    #  ignored for add-1 smoothing.
-    #  You do not need to build a dictionary for add-1 smoothing. The
-    #  built-in dataframe operations are fast and efficient in this case.
-    #
     # ToDo (Kneser-Ney):
     #  Build the model using a nested dictionary (see get_bigram_counts for
     #  an example of how to build a nested dictionary), then convert the
@@ -160,6 +154,8 @@ def build_model(bigram_counts, d=.75):
     #  calculated once).
 
     return pd.DataFrame()
+
+    print()
 
 
 # parse command-line arguments
