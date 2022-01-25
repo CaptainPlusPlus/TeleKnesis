@@ -26,20 +26,40 @@ UNKNOWN = "<UNK>"
 #  The returned sentence is a list of words ['<s>', 'w1', ..., 'wn', '</s>']
 #  Replace UNKNOWN with a randomly selected word from unknown_words.
 def generate_sentence(prob_df, unknown_words):
-    return []
+    sentence = ['<s>']
+
+    last_word = sentence[-1]
+    while 1:
+        sentence += random.choices(prob_df.columns, prob_df.loc[last_word])
+        last_word = sentence[-1]
+
+        if last_word == '</s>': break
+        if last_word == "<UNK>": sentence[-1] = random.choice(unknown_words)
+    # if last_word != "</s>": sentence += ["</s>"]
+    return sentence
 
 
 # ToDo:
 #  Return the log probability of sent,
 #  where sent is a list of words [<s>, 'w1', ..., 'wn', </s>].
 def get_sent_logprob(log_df, sent):
-    return -np.inf
+    log_prob = 0
+    for index in range(1, len(sent)): log_prob += log_df.loc[sent[index - 1], sent[index]]
+
+    return log_prob
 
 
 # ToDo:
 #  Calculate the perplexity of the model with the given test sentences
 def get_perplexity(log_df, test_sentences):
-    return np.inf
+    # Extract log probabilities, Calculate Perplexity of all sentences appearing in concession
+    corpus_logprob = sum([get_sent_logprob(log_df, sent) for sent in test_sentences])
+
+    # Get number of words in corpues, counting EOS tokens, omitting BOS tokens
+    n_words = sum([len(sent) for sent in test_sentences]) - len(test_sentences)
+
+    # Assigning variables to perplexity formula
+    return math.pow(10, (-1 / n_words) * corpus_logprob)
 
 
 # Return a DataFrame representing the unigram counts for the
@@ -162,11 +182,9 @@ def build_model(bigram_counts, d=.75):
     w1_to_w2_bigram_counts = bigram_counts.transpose().to_dict()
 
     # Get word and bigram counts
-
-    total_start_end_counts = get_total_start_end_counts(bigram_counts, w1_to_w2_bigram_counts, non_zeroes)
+    total_start_end_counts = get_total_start_end_pcont(bigram_counts, w1_to_w2_bigram_counts, non_zeroes)
 
     # Perform Kneser Neys smoothing for each cell
-
     kn_dict = dict()
     # wi is word1, wj is word2
     for w_i in bigram_counts.index:
@@ -179,10 +197,12 @@ def build_model(bigram_counts, d=.75):
     kn_df = pd.DataFrame(kn_dict)
     kn_df.replace(np.nan, 0, inplace=True)
 
-    print(kn_df.transpose())
+    return kn_df.transpose()
 
 
-def get_total_start_end_counts(bigram_counts, w1_to_w2_bigram_counts, total_bigram_counts):
+
+
+def get_total_start_end_pcont(bigram_counts, w1_to_w2_bigram_counts, total_bigram_counts):
     """
      Create a dictionary for every word
      with its counts, number of bigram types it starts,
