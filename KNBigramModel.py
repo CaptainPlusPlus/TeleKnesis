@@ -153,30 +153,63 @@ def build_model(bigram_counts, d=.75):
     #  reused (for example, continuation probabilities only need to be
     #  calculated once).
 
-    #print(bigram_counts.index)
+    # Get total bigram counts
+    non_zeroes = 0
+    for column in bigram_counts.columns:
+        non_zeroes += sum(bigram_counts[column] != 0)
+
+    # Extract Bigram count to dict for easy access
+    w1_to_w2_bigram_counts = bigram_counts.transpose().to_dict()
+
+    # Get word and bigram counts
+
+    total_start_end_counts = get_total_start_end_counts(bigram_counts, w1_to_w2_bigram_counts, non_zeroes)
+
+    # Perform Kneser Neys smoothing for each cell
 
     kn_dict = dict()
-
     # wi is word1, wj is word2
-    for (w_i, w_j) in zip(bigram_counts.index, bigram_counts.columns):
-        kn_dict[w_i] = kn_dict.setdefault(w_i, {w_j: 0})
-        kn_dict[w_i][w_j] = kn_dict[w_i].setdefault(w_j, 0)
+    for w_i in bigram_counts.index:
+        for w_j in bigram_counts.columns:
+            kn_dict[w_i] = kn_dict.setdefault(w_i, {w_j: 0})
+            kn_dict[w_i][w_j] = kn_dict[w_i].setdefault(w_j, 0)
+            kn_dict[w_i][w_j] = kneser_neys(d, w1_to_w2_bigram_counts[w_i][w_j], total_start_end_counts[w_i][0],
+                                            total_start_end_counts[w_i][1], total_start_end_counts[w_j][2])
 
     kn_df = pd.DataFrame(kn_dict)
     kn_df.replace(np.nan, 0, inplace=True)
 
-    print(kn_df)
+    print(kn_df.transpose())
 
 
+def get_total_start_end_counts(bigram_counts, w1_to_w2_bigram_counts, total_bigram_counts):
+    """
+     Create a dictionary for every word
+     with its counts, number of bigram types it starts,
+     number of bigram types it ends
+    :returns: a dictionary, Key - word. Value- [<counts>, <bigram types it starts>, <pcont_w>]
+    """
+    total_start_end_counts = dict().fromkeys(list(bigram_counts.columns) + ["<s>"])
+
+    # Go over rows, count total and amount of bigrams it starts
+    for w1 in total_start_end_counts.keys(): total_start_end_counts[w1] = [0.0, 0.0, 0.0]
+    for w1 in w1_to_w2_bigram_counts.keys():
+        for w2 in w1_to_w2_bigram_counts[w1].keys():
+            if w1_to_w2_bigram_counts[w1][w2] != 0.0:
+                total_start_end_counts[w1][0] += w1_to_w2_bigram_counts[w1][w2]  # word counts (index 0)
+                total_start_end_counts[w1][1] += 1.0  # bigram types it starts (index 1)
+                total_start_end_counts[w2][2] += 1.0  # bigram types it ends (index 2)
+    total_start_end_counts["</s>"][0] = total_start_end_counts["<s>"][0]
+
+    for w1 in total_start_end_counts.keys(): total_start_end_counts[w1][2] /= total_bigram_counts
+
+    return total_start_end_counts
 
 
-def kneser_neys(d, bigram_count, w1_count, tot_bigr_types, wtypes_end_w2,  wtypes_start_w1):
+def kneser_neys(d, bigram_count, w1_count, wtypes_start_w1, pcont_w2):
     lambda_w1 = (d * wtypes_start_w1) / w1_count
 
-    # TODO (us) create a dict. Calculate only if not in dict and add to dict
-    pcont_w2 = wtypes_end_w2 / tot_bigr_types
-
-    return max(bigram_count-d, 0) / w1_count + (lambda_w1 * pcont_w2)
+    return (max(bigram_count-d, 0) / w1_count) + (lambda_w1 * pcont_w2)
 
 # parse command-line arguments
 def parse_args():
