@@ -1,10 +1,9 @@
 """
 Course:         Statistical Methods for NLP I: Parsing
 Project:        Bigram Models
-Author(s):      <Your first and last name(s) and matriculation number(s)>
-Description:    <very short description of what the code does (e.g. Bigram model
-                with add-1 smoothing)>
-Honor Code:     I/We pledge that this code is my/our own work, and that
+Author(s):      Daniela Verratti Souto 5692183, Felix Redfox 5671979
+Description:    Sentence generation, corpus perplexity calculation and OOV rate calc with Kneiser Ney smoothing
+Honor Code:     We pledge that this code is our own work, and that
                 no part of this work was copied from, or shared with, others.
 """
 
@@ -14,34 +13,34 @@ import math
 import pandas as pd
 import numpy as np
 
-
 BOS_MARKER = "<s>"
 EOS_MARKER = "</s>"
 UNKNOWN = "<UNK>"
 
 
-# ToDo:
-#  Generate a sentence with probabilities according
-#  to the given bigram model
-#  The returned sentence is a list of words ['<s>', 'w1', ..., 'wn', '</s>']
-#  Replace UNKNOWN with a randomly selected word from unknown_words.
+# Generate a sentence with probabilities according
+# to the given bigram model
+# The returned sentence is a list of words ['<s>', 'w1', ..., 'wn', '</s>']
+# Replace UNKNOWN with a randomly selected word from unknown_words.
 def generate_sentence(prob_df, unknown_words):
     sentence = ['<s>']
 
+    # Init basic sentence.
     last_word = sentence[-1]
+    # Add a random word based on bigram weights until end token is generated
     while 1:
         sentence += random.choices(prob_df.columns, prob_df.loc[last_word])
         last_word = sentence[-1]
 
         if last_word == '</s>': break
+        # Replace UNK token with randomly selected word
         if last_word == "<UNK>": sentence[-1] = random.choice(unknown_words)
-    # if last_word != "</s>": sentence += ["</s>"]
+
     return sentence
 
 
-# ToDo:
-#  Return the log probability of sent,
-#  where sent is a list of words [<s>, 'w1', ..., 'wn', </s>].
+# Return the log probability of sent,
+# where sent is a list of words [<s>, 'w1', ..., 'wn', </s>].
 def get_sent_logprob(log_df, sent):
     log_prob = 0
     for index in range(1, len(sent)): log_prob += log_df.loc[sent[index - 1], sent[index]]
@@ -49,8 +48,7 @@ def get_sent_logprob(log_df, sent):
     return log_prob
 
 
-# ToDo:
-#  Calculate the perplexity of the model with the given test sentences
+# Calculate the perplexity of the model with the given test sentences
 def get_perplexity(log_df, test_sentences):
     # Extract log probabilities, Calculate Perplexity of all sentences appearing in concession
     corpus_logprob = sum([get_sent_logprob(log_df, sent) for sent in test_sentences])
@@ -159,32 +157,20 @@ def read_and_preprocess_corpus(corpus_file, vocab=None, padding=False):
     return tok_sentences
 
 
-# ToDo:
-#  Build the model using the given bigram counts dataframe,
-#  and using the smoothing method described in the project requirements.
+#  Build Kneiser ney model using the given bigram counts dataframe.
 def build_model(bigram_counts, d=.75):
-    # ToDo (Kneser-Ney):
-    #  Build the model using a nested dictionary (see get_bigram_counts for
-    #  an example of how to build a nested dictionary), then convert the
-    #  dictionary to a dataframe and return the dataframe.
-    #  It is necessary to use a dictionary because creating a dataframe and
-    #  updating/adding values in it is MUCH TOO SLOW.
-    #  Avoid making the same calculations over and over. Some values can be
-    #  reused (for example, continuation probabilities only need to be
-    #  calculated once).
-
-    # Get total bigram counts
+    # Get total bigram counts.
     non_zeroes = 0
     for column in bigram_counts.columns:
         non_zeroes += sum(bigram_counts[column] != 0)
 
-    # Extract Bigram count to dict for easy access
+    # Extract Bigram count to dict for easy access.
     w1_to_w2_bigram_counts = bigram_counts.transpose().to_dict()
 
-    # Get word and bigram counts
+    # Get word and bigram counts.
     total_start_end_counts = get_total_start_end_pcont(bigram_counts, w1_to_w2_bigram_counts, non_zeroes)
 
-    # Perform Kneser Neys smoothing for each cell
+    # Perform Kneser Neys smoothing for each cell.
     kn_dict = dict()
     # wi is word1, wj is word2
     for w_i in bigram_counts.index:
@@ -200,8 +186,6 @@ def build_model(bigram_counts, d=.75):
     return kn_df.transpose()
 
 
-
-
 def get_total_start_end_pcont(bigram_counts, w1_to_w2_bigram_counts, total_bigram_counts):
     """
      Create a dictionary for every word
@@ -209,27 +193,32 @@ def get_total_start_end_pcont(bigram_counts, w1_to_w2_bigram_counts, total_bigra
      number of bigram types it ends
     :returns: a dictionary, Key - word. Value- [<counts>, <bigram types it starts>, <pcont_w>]
     """
-    total_start_end_counts = dict().fromkeys(list(bigram_counts.columns) + ["<s>"])
+    total_start_pconts = dict().fromkeys(list(bigram_counts.columns) + ["<s>"])
 
-    # Go over rows, count total and amount of bigrams it starts
-    for w1 in total_start_end_counts.keys(): total_start_end_counts[w1] = [0.0, 0.0, 0.0]
+    # Init value array as placeholder for Total, bigram start and bigram end counts.
+    for w1 in total_start_pconts.keys(): total_start_pconts[w1] = [0.0, 0.0, 0.0]
+
     for w1 in w1_to_w2_bigram_counts.keys():
         for w2 in w1_to_w2_bigram_counts[w1].keys():
             if w1_to_w2_bigram_counts[w1][w2] != 0.0:
-                total_start_end_counts[w1][0] += w1_to_w2_bigram_counts[w1][w2]  # word counts (index 0)
-                total_start_end_counts[w1][1] += 1.0  # bigram types it starts (index 1)
-                total_start_end_counts[w2][2] += 1.0  # bigram types it ends (index 2)
-    total_start_end_counts["</s>"][0] = total_start_end_counts["<s>"][0]
+                # word counts (index 0)
+                total_start_pconts[w1][0] += w1_to_w2_bigram_counts[w1][w2]
+                total_start_pconts[w1][1] += 1.0  # bigram types it starts (index 1)
+                total_start_pconts[w2][2] += 1.0  # bigram types it ends (index 2)
+    total_start_pconts["</s>"][0] = total_start_pconts["<s>"][0]
 
-    for w1 in total_start_end_counts.keys(): total_start_end_counts[w1][2] /= total_bigram_counts
+    # Obtain pcont from Bigram end counts.
+    for w1 in total_start_pconts.keys(): total_start_pconts[w1][2] /= total_bigram_counts
 
-    return total_start_end_counts
+    return total_start_pconts
 
 
+# Perform kneser ney smoothing on given cell according to input.
 def kneser_neys(d, bigram_count, w1_count, wtypes_start_w1, pcont_w2):
     lambda_w1 = (d * wtypes_start_w1) / w1_count
 
-    return (max(bigram_count-d, 0) / w1_count) + (lambda_w1 * pcont_w2)
+    return (max(bigram_count - d, 0) / w1_count) + (lambda_w1 * pcont_w2)
+
 
 # parse command-line arguments
 def parse_args():
@@ -239,27 +228,31 @@ def parse_args():
     return parser.parse_args()
 
 
-# ToDo:
-#  Train and test a bigram model.
-#  The submitted models should not contain any print statements that are
-#  not in this starter code. Please remove extra print statements that
-#  you may have added during development before submission.
 def main(args):
-
     # Read the training data
     train = read_and_preprocess_corpus(args.corpus_file)
 
     # Replace OOV words, and get the training vocab and unknown words
     vocab, unknown_words = replace_oov(train)
 
-    # ToDo: calculate and print the OOV rate of the training corpus
-    oov_rate = 0
-    print(f'OOV rate: {oov_rate}')
+    # Read the test corpus, using the fixed vocabulary, and adding sentence markers
+    test_sentences = read_and_preprocess_corpus(args.test_file, vocab=vocab, padding=True)
+
+    # Calculate and print the OOV rate of the test corpus
+    n_words = 0
+    unks = 0
+
+    for sent in test_sentences:
+        n_words += len(sent) - 2  # remove BOS and EOS
+        unks += sent.count(UNKNOWN)
+
+    oov_rate = unks / n_words * 100
+    print(f'OOV rate test: {oov_rate}')
 
     # Get the bigram counts, using the fixed vocabulary
     bigram_counts = get_bigram_counts(train, vocab=vocab)
 
-    # ToDo: build the model
+    # Build Kneiser Ney model
     bigram_model = build_model(bigram_counts)
 
     # convert probabilities to log probabilities
@@ -272,16 +265,13 @@ def main(args):
         sent = ' '.join(sent)
         print(f'{sent}')
 
-    # Read the test corpus, using the fixed vocabulary, and adding sentence markers
-    test_sentences = read_and_preprocess_corpus(args.test_file, vocab=vocab, padding=True)
-
     # Print the sentence probabilities for the first 5 test sentences
     for test_sent in test_sentences[:5]:
         # use log probabilities to get prob of a sentence
         logprob = get_sent_logprob(log_df, test_sent)
         print(f'P({test_sent}): {math.pow(10, logprob)}')
 
-    # Calculate the perplexity of the test sentences corpus
+    # Calculate the perplexity of the test sentences' corpus
     # Use log probabilities to calculate perplexity
     perplexity = get_perplexity(log_df, test_sentences)
     print(f'\nperplexity of test_sentences: {perplexity}')

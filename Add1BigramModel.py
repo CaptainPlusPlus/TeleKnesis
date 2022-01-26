@@ -1,10 +1,9 @@
 """
 Course:         Statistical Methods for NLP I: Parsing
 Project:        Bigram Models
-Author(s):      <Your first and last name(s) and matriculation number(s)>
-Description:    <very short description of what the code does (e.g. Bigram model
-                with add-1 smoothing)>
-Honor Code:     I/We pledge that this code is my/our own work, and that
+Author(s):      Daniela Verratti Souto 5692183, Felix Redfox 5671979
+Description:    Sentence generation, corpus perplexity calculation and OOV rate calc with Bigram model add-1 smoothing
+Honor Code:     We pledge that this code is our own work, and that
                 no part of this work was copied from, or shared with, others.
 """
 
@@ -19,27 +18,32 @@ EOS_MARKER = "</s>"
 UNKNOWN = "<UNK>"
 
 
-# ToDo:
 #  Generate a sentence with probabilities according
 #  to the given bigram model
 #  The returned sentence is a list of words ['<s>', 'w1', ..., 'wn', '</s>']
-#  Replace UNKNOWN with a randomly selected word from unknown_words.
+#  Replaces UNKNOWN with a randomly selected word from unknown_words.
 def generate_sentence(prob_df, unknown_words):
     sentence = ['<s>']
 
+    # Init sentence
     last_word = sentence[-1]
-    while len(sentence) <= 20:
+
+    # End sentence token is less likely in Add1 smoothing.
+    # Randomize an enforced sentence length cap in the range of a median English sentence.
+    sent_len = random.randint(15, 30)
+
+    while len(sentence) <= sent_len:
         sentence += random.choices(prob_df.columns, prob_df.loc[last_word])
         last_word = sentence[-1]
 
         if last_word == '</s>': break
         if last_word == "<UNK>": sentence[-1] = random.choice(unknown_words)
     if last_word != "</s>": sentence += ["</s>"]
+
     return sentence
 
 
-# ToDo:
-#  Return the log probability of sent,
+#  Returns log probability of sent,
 #  where sent is a list of words [<s>, 'w1', ..., 'wn', </s>].
 def get_sent_logprob(log_df, sent):
     log_prob = 0
@@ -48,8 +52,7 @@ def get_sent_logprob(log_df, sent):
     return log_prob
 
 
-# ToDo:
-#  Calculate the perplexity of the model with the given test sentences
+#  Calculates the perplexity of the model with the given test sentences
 def get_perplexity(log_df, test_sentences):
     # Extract log probabilities, Calculate Perplexity of all sentences appearing in concession
     corpus_logprob = sum([get_sent_logprob(log_df, sent) for sent in test_sentences])
@@ -61,7 +64,7 @@ def get_perplexity(log_df, test_sentences):
     return math.pow(10, (-1 / n_words) * corpus_logprob)
 
 
-# Return a DataFrame representing the unigram counts for the
+# Returns a DataFrame representing the unigram counts for the
 # tokenized training data.
 def get_unigram_counts(training_data):
     # counts is a dict: {key=word, value=count}
@@ -129,7 +132,7 @@ def get_bigram_counts(training_data, vocab=None, padding=True):
     return count_df
 
 
-# Convert all dataframe cells to log probabilities using base 10
+# Converts all dataframe cells to log probabilities using base 10
 def df_to_log(prob_df):
     return np.log10(prob_df)
 
@@ -156,28 +159,22 @@ def read_and_preprocess_corpus(corpus_file, vocab=None, padding=False):
     return tok_sentences
 
 
-# ToDo:
 #  Build the model using the given bigram counts dataframe,
 #  and using the smoothing method described in the project requirements.
 def build_model(bigram_counts, d=.75):
-    # ToDo (add-1):
-    #  The parameter d is only needed for Kneser-Ney smoothing, and can be
-    #  ignored for add-1 smoothing.
-    #  You do not need to build a dictionary for add-1 smoothing. The
-    #  built-in dataframe operations are fast and efficient in this case.
-
     row_sums = bigram_counts.sum(axis=1).values
-    smooth_bigram_counts = bigram_counts.copy()
-    columns = list(smooth_bigram_counts)
+    smooth_bigram_cnts = bigram_counts.copy()
+    columns = list(smooth_bigram_cnts)
+
     for col in columns:
-        for row_idx, row in enumerate(smooth_bigram_counts.index):
-            smooth_bigram_counts.at[row, col] = \
-                laplace(smooth_bigram_counts.at[row, col], row_sums[row_idx], len(columns))
-    return smooth_bigram_counts
+        for row_idx, row in enumerate(smooth_bigram_cnts.index):
+            smooth_bigram_cnts.at[row, col] = laplace(smooth_bigram_cnts.at[row, col], row_sums[row_idx], len(columns))
+
+    return smooth_bigram_cnts
 
 
-def laplace(bigram_count, count_given, vocab_size):
-    return (bigram_count + 1) / (count_given + vocab_size)
+# Perform laplace smoothing of cell with given input
+def laplace(bigram_count, count_given, vocab_size): return (bigram_count + 1) / (count_given + vocab_size)
 
 
 # parse command-line arguments
@@ -188,11 +185,7 @@ def parse_args():
     return parser.parse_args()
 
 
-# ToDo:
 #  Train and test a bigram model.
-#  The submitted models should not contain any print statements that are
-#  not in this starter code. Please remove extra print statements that
-#  you may have added during development before submission.
 def main(args):
     # Read the training data
     train = read_and_preprocess_corpus(args.corpus_file)
@@ -200,13 +193,27 @@ def main(args):
     # Replace OOV words, and get the training vocab and unknown words
     vocab, unknown_words = replace_oov(train)
 
+    # Read the test corpus, using the fixed vocabulary, and adding sentence markers
+    test_sentences = read_and_preprocess_corpus(args.test_file, vocab=vocab, padding=True)
+
+    # Calculate and print the OOV rate of the test corpus
+    n_words = 0
+    unks = 0
+
+    for sent in test_sentences:
+        n_words += len(sent) - 2  # remove BOS and EOS
+        unks += sent.count(UNKNOWN)
+
+    oov_rate = unks / n_words * 100
+    print(f'OOV rate test: {oov_rate}')
+
     # Get the bigram counts, using the fixed vocabulary
     bigram_counts = get_bigram_counts(train, vocab=vocab)
 
-    # ToDo: build the model
+    # Build the model
     bigram_model = build_model(bigram_counts)
 
-    # convert probabilities to log probabilities
+    # Convert probabilities to log probabilities
     log_df = df_to_log(bigram_model)
 
     # Generate and print 10 sentences using the model
@@ -215,24 +222,6 @@ def main(args):
         sent = generate_sentence(bigram_model, unknown_words)
         sent = ' '.join(sent)
         print(f'{sent}')
-
-    # Read the test corpus, using the fixed vocabulary, and adding sentence markers
-    test_sentences = read_and_preprocess_corpus(args.test_file, vocab=vocab, padding=True)
-
-    # ToDo: calculate and print the OOV rate of the test corpus
-    #  it's the percentage of words over tokens
-
-    n_words = 0
-    unks = 0
-
-    for sent in test_sentences:
-        n_words += len(sent) - 2 # remove BOS and EOS
-        unks += sent.count(UNKNOWN)
-
-    oov_rate = unks / n_words * 100
-    print(f'OOV rate test: {oov_rate}')
-
-
 
     # Print the sentence probabilities for the first 5 test sentences
     for test_sent in test_sentences[:5]:
