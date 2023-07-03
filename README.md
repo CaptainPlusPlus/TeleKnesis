@@ -1,3 +1,2 @@
 # TeleKnesis
-
-## A true Psycholinguist never reveals his secrets
+Add-1 and Kneiser Ney smoothing algorithms implmeneted in Python.
